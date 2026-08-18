@@ -43,3 +43,58 @@ exports.registrar = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+exports.registrarMedico = async (req, res) => {
+  const { nombre, correo, contrasena, cedula_profesional, especialidad } = req.body;
+  
+  // Seguridad extra: Validamos que quien hace la petición sea el Root
+  if (req.usuario.rol !== 'administrador') {
+    return res.status(403).json({ error: 'Acceso denegado. Solo el administrador puede registrar médicos.' });
+  }
+
+  try {
+    // 1. Insertamos al médico en la tabla de usuarios
+    const userResult = await db.query(
+      "INSERT INTO usuarios (nombre, correo, contrasena, rol) VALUES ($1, $2, $3, 'medico') RETURNING id",
+      [nombre, correo, contrasena]
+    );
+    const nuevoMedicoId = userResult.rows[0].id;
+
+    // 2. Guardamos sus datos profesionales en la tabla de médicos
+    await db.query(
+      "INSERT INTO medicos (usuario_id, cedula_profesional, especialidad) VALUES ($1, $2, $3)",
+      [nuevoMedicoId, cedula_profesional, especialidad]
+    );
+
+    res.status(201).json({ mensaje: 'Profesional médico registrado con éxito en el sistema.' });
+  } catch (error) {
+    if (error.code === '23505') return res.status(409).json({ error: 'El correo o la cédula ya están registrados.' });
+    res.status(500).json({ error: error.message });
+  }
+};
+// Obtener todos los médicos registrados
+exports.obtenerDirectorioMedicos = async (req, res) => {
+  if (req.usuario.rol !== 'administrador') return res.status(403).json({ error: 'Acceso denegado.' });
+  try {
+    // CORRECCIÓN: Usamos u.id en lugar de m.id para evitar errores de columnas inexistentes
+    const medicos = await db.query(
+      `SELECT u.id, m.cedula_profesional, m.especialidad, u.nombre, u.correo 
+       FROM medicos m 
+       JOIN usuarios u ON m.usuario_id = u.id`
+    );
+    res.status(200).json(medicos.rows);
+  } catch (error) {
+    // Imprimimos el error exacto en la consola de Docker para un diagnóstico rápido
+    console.error("🔴 Error SQL en directorio de médicos:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
+// Obtener todos los pacientes (usuarios con rol 'paciente')
+exports.obtenerDirectorioPacientes = async (req, res) => {
+  if (req.usuario.rol !== 'administrador') return res.status(403).json({ error: 'Acceso denegado.' });
+  try {
+    const pacientes = await db.query(
+      "SELECT id, nombre, correo FROM usuarios WHERE rol = 'paciente'"
+    );
+    res.status(200).json(pacientes.rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+};
