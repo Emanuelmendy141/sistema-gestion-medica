@@ -15,3 +15,19 @@ exports.crearCita = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+exports.obtenerCitas = async (req, res) => {
+  try {
+    const paciente_id = req.usuario.id;
+    const citas = await db.query(
+      `SELECT c.id, c.fecha, c.hora, c.motivo_consulta, c.estado, m.especialidad
+       FROM citas c
+       JOIN medicos m ON c.medico_id = m.usuario_id
+       WHERE c.paciente_id = $1
+       ORDER BY c.fecha, c.hora`,
+      [paciente_id]
+    );
+    res.status(200).json(citas.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
