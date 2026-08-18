@@ -13,6 +13,9 @@ app.use('/api/auth', authRoutes); // <-- 2. Agrega esta línea
 
 app.post('/api/citas', authMiddleware, citaController.crearCita);
 app.get('/api/citas', authMiddleware, citaController.obtenerCitas);
+app.patch('/api/citas/:id/cancelar', authMiddleware, citaController.cancelarCita); // <-- Nueva ruta
+app.get('/api/citas/medico', authMiddleware, citaController.obtenerCitasMedico);
+app.patch('/api/citas/:id/atender', authMiddleware, citaController.atenderCita);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Backend corriendo en puerto ${PORT}`));

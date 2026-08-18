@@ -28,3 +28,18 @@ exports.login = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+exports.registrar = async (req, res) => {
+  const { nombre, correo, contrasena } = req.body;
+  try {
+    // Insertamos al usuario forzando el rol de 'paciente'
+    const result = await db.query(
+      "INSERT INTO usuarios (nombre, correo, contrasena, rol) VALUES ($1, $2, $3, 'paciente') RETURNING id, nombre, correo, rol",
+      [nombre, correo, contrasena]
+    );
+    res.status(201).json({ mensaje: 'Usuario registrado con éxito. Ya puedes iniciar sesión.', usuario: result.rows[0] });
+  } catch (error) {
+    // Código 23505 significa "Violación de índice único" (correo duplicado)
+    if (error.code === '23505') return res.status(409).json({ error: 'Este correo electrónico ya está registrado.' });
+    res.status(500).json({ error: error.message });
+  }
+};
